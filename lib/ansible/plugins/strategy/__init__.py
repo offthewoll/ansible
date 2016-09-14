@@ -412,10 +412,16 @@ class StrategyBase:
 
         display.debug("waiting for pending results...")
         dead_check = 10
+        print_count = 0
         while self._pending_results > 0 and not self._tqm._terminated:
 
             results = self._process_pending_results(iterator)
             ret_results.extend(results)
+
+            print_count += 1
+            if print_count > 1000:
+                print("waiting on pending results still: %s" % self._pending_results)
+                print_count = 0
 
             dead_check -= 1
             if dead_check == 0:

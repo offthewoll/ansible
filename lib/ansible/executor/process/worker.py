@@ -57,6 +57,7 @@ class WorkerProcess(multiprocessing.Process):
 
     def __init__(self, rslt_q, play, host, task, task_vars, play_context, loader, variable_manager, shared_loader_obj):
 
+        print(u"WORKER STARTING INIT: %s - %s" % (to_text(host), to_text(task)))
         super(WorkerProcess, self).__init__()
         # takes a task queue manager as the sole param:
         self._rslt_q            = rslt_q
@@ -85,6 +86,15 @@ class WorkerProcess(multiprocessing.Process):
         except (AttributeError, ValueError):
             # couldn't get stdin's fileno, so we just carry on
             pass
+        print(u"WORKER DONE WITH INIT: %s - %s" % (to_text(host), to_text(task)))
+
+    def start(self, tqm):
+        print(u"WORKER CALLING START: %s - %s" % (to_text(self._host), to_text(self._task)))
+        try:
+            tqm._queued_tasks_lock.release()
+        except:
+            pass
+        super(WorkerProcess, self).start()
 
     def run(self):
         '''
@@ -93,6 +103,7 @@ class WorkerProcess(multiprocessing.Process):
         signify that they are ready for their next task.
         '''
 
+        print(u"WORKER STARTING RUN: %s - %s" % (to_text(self._host), to_text(self._task)))
         #import cProfile, pstats, StringIO
         #pr = cProfile.Profile()
         #pr.enable()
@@ -103,6 +114,7 @@ class WorkerProcess(multiprocessing.Process):
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            print(u"WORKER RUNNING TASK: %s - %s" % (to_text(self._host), to_text(self._task)))
             executor_result = TaskExecutor(
                 self._host,
                 self._task,
@@ -113,6 +125,7 @@ class WorkerProcess(multiprocessing.Process):
                 self._shared_loader_obj,
                 self._rslt_q
             ).run()
+            print(u"WORKER DONE RUNNING TASK: %s - %s" % (to_text(self._host), to_text(self._task)))
 
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
             self._host.vars = dict()
@@ -131,6 +144,8 @@ class WorkerProcess(multiprocessing.Process):
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
+            print(u"WORKER EXCEPTION: %s" % to_text(e))
+            print(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
                 try:
                     self._host.vars = dict()
@@ -151,4 +166,5 @@ class WorkerProcess(multiprocessing.Process):
         #with open('worker_%06d.stats' % os.getpid(), 'w') as f:
         #    f.write(s.getvalue())
 
+        print(u"WORKER DONE: %s - %s" % (to_text(self._host), to_text(self._task)))
         sys.exit(0)
